@@ -1,0 +1,11 @@
+DEBUG_MODE=1
+LOG_ENABLED="true"
+LOG_LEVEL=debug
+LOG_DESTINATION=1
+
+# this requires setting up a local postgresql user and database
+DATABASE_URL=postgres://postgres:postgres@database/bgs
+CARSTORE_DATABASE_URL=postgres://postgres:postgres@database/carstore
+DATA_DIR=/data
+ATP_PLC_HOST=https://plc.socl.is
+BGS_ADMIN_KEY=<<REDACTED: openssl ecparam --name secp256k1 --genkey --noout --outform DER | tail --bytes=+8 | head --bytes=32 | xxd --plain --cols 32>>

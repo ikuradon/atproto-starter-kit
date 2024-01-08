@@ -1,0 +1,410 @@
+services:
+  plc:
+    build:
+      context: ./repos/did-method-plc/
+      dockerfile: packages/server/Dockerfile
+    restart: always
+    env_file:
+      - ./envs/plc
+    networks:
+      - traefik_network
+      - internal_network
+    healthcheck:
+      test: "wget -q --spider http://localhost:3000/_health"
+      interval: 5s
+      retries: 20
+    depends_on:
+      database:
+        condition: service_healthy
+    labels:
+      "traefik.enable": "true"
+      "traefik.http.services.socl-plc.loadbalancer.server.port": "3000"
+      "traefik.http.routers.socl-plc.rule": "Host(`plc.socl.is`) && PathPrefix(`/`)"
+      "traefik.http.routers.socl-plc.tls.certresolver": "resolver"
+      "traefik.http.routers.socl-plc.tls.domains[0].main": "socl.is"
+      "traefik.http.routers.socl-plc.tls.domains[0].sans": "*.socl.is"
+
+  bgs:
+    build:
+      context: ./repos/indigo/
+      dockerfile: cmd/bigsky/Dockerfile
+    restart: always
+    env_file:
+      - ./envs/bgs
+    volumes:
+      - ./data/bgs/:/data/
+    networks:
+      - traefik_network
+      - internal_network
+    healthcheck:
+      test: "wget -q --spider http://localhost:2470/xrpc/_health"
+      interval: 5s
+      retries: 20
+    depends_on:
+      database:
+        condition: service_healthy
+    labels:
+      "traefik.enable": "true"
+      "traefik.http.services.socl-bgs.loadbalancer.server.port": "2470"
+      "traefik.http.routers.socl-bgs.rule": "Host(`bgs.at.socl.is`) && PathPrefix(`/`)"
+      "traefik.http.routers.socl-bgs.tls.certresolver": "resolver"
+      "traefik.http.routers.socl-bgs.tls.domains[0].main": "at.socl.is"
+      "traefik.http.routers.socl-bgs.tls.domains[0].sans": "*.at.socl.is"
+
+  appview-fix-permission:
+    image: alpine:latest
+    volumes:
+      - ./data/appview/cache/:/cache/
+    command: chown 1000.1000 /cache
+
+  appview-api:
+    build:
+      context: ./repos/atproto/
+      dockerfile: services/bsky/Dockerfile
+    restart: always
+    env_file:
+      - ./envs/appview
+    volumes:
+      - ./data/appview/cache/:/cache/
+    networks:
+      - traefik_network
+      - internal_network
+    healthcheck:
+      test: "wget -q --spider http://localhost:3000/xrpc/_health"
+      interval: 5s
+      retries: 20
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      appview-fix-permission:
+        condition: service_completed_successfully
+    labels:
+      "traefik.enable": "true"
+      "traefik.http.services.socl-appview-api.loadbalancer.server.port": "3000"
+      "traefik.http.routers.socl-appview-api.rule": "Host(`api.at.socl.is`) && PathPrefix(`/`)"
+      "traefik.http.routers.socl-appview-api.tls.certresolver": "resolver"
+      "traefik.http.routers.socl-appview-api.tls.domains[0].main": "at.socl.is"
+      "traefik.http.routers.socl-appview-api.tls.domains[0].sans": "*.at.socl.is"
+
+  appview-cdn:
+    build:
+      context: ./repos/atproto/
+      dockerfile: services/bsky/Dockerfile
+    restart: always
+    env_file:
+      - ./envs/appview-cdn
+    volumes:
+      - ./data/appview/cache/:/cache/
+    networks:
+      - traefik_network
+      - internal_network
+    healthcheck:
+      test: "wget -q --spider http://localhost:3000/xrpc/_health"
+      interval: 5s
+      retries: 20
+    depends_on:
+      appview-api:
+        condition: service_healthy
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      appview-fix-permission:
+        condition: service_completed_successfully
+    labels:
+      "traefik.enable": "true"
+      "traefik.http.services.socl-appview-cdn.loadbalancer.server.port": "3000"
+      "traefik.http.routers.socl-appview-cdn.rule": "Host(`cdn.socl.is`) && PathPrefix(`/img`)"
+      "traefik.http.routers.socl-appview-cdn.tls.certresolver": "resolver"
+      "traefik.http.routers.socl-appview-cdn.tls.domains[0].main": "socl.is"
+      "traefik.http.routers.socl-appview-cdn.tls.domains[0].sans": "*.socl.is"
+
+      "traefik.http.middlewares.socl-appview-redirector.redirectregex.regex": "^https://cdn.socl.is/(.*)"
+      "traefik.http.middlewares.socl-appview-redirector.redirectregex.replacement": "https://socl.is/"
+      "traefik.http.routers.socl-appview-redirector.rule": "Host(`cdn.socl.is`) && PathPrefix(`/`)"
+      "traefik.http.routers.socl-appview-redirector.service": "socl-appview-cdn"
+      "traefik.http.routers.socl-appview-redirector.middlewares": "socl-appview-redirector"
+      "traefik.http.routers.socl-appview-redirector.tls.certresolver": "resolver"
+      "traefik.http.routers.socl-appview-redirector.tls.domains[0].main": "socl.is"
+      "traefik.http.routers.socl-appview-redirector.tls.domains[0].sans": "*.socl.is"
+
+  appview-daemon:
+    build:
+      context: ./repos/atproto/
+      dockerfile: services/bsky/Dockerfile
+    restart: always
+    command: node --enable-source-maps daemon.js
+    env_file:
+      - ./envs/appview
+    volumes:
+      - ./data/appview/cache/:/cache/
+    networks:
+      - traefik_network
+      - internal_network
+    depends_on:
+      appview-api:
+        condition: service_healthy
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      appview-fix-permission:
+        condition: service_completed_successfully
+
+  appview-indexer:
+    build:
+      context: ./repos/atproto/
+      dockerfile: services/bsky/Dockerfile
+    restart: always
+    command: node --enable-source-maps indexer.js
+    env_file:
+      - ./envs/appview
+    volumes:
+      - ./data/appview/cache/:/cache/
+    networks:
+      - traefik_network
+      - internal_network
+    depends_on:
+      appview-api:
+        condition: service_healthy
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      appview-fix-permission:
+        condition: service_completed_successfully
+
+  appview-ingester:
+    build:
+      context: ./repos/atproto/
+      dockerfile: services/bsky/Dockerfile
+    restart: always
+    command: node --enable-source-maps ingester.js
+    env_file:
+      - ./envs/appview
+    volumes:
+      - ./data/appview/cache/:/cache/
+    networks:
+      - traefik_network
+      - internal_network
+    depends_on:
+      appview-api:
+        condition: service_healthy
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      appview-fix-permission:
+        condition: service_completed_successfully
+
+  moderation-api:
+    build:
+      context: ./repos/atproto/
+      dockerfile: services/ozone/Dockerfile
+    restart: always
+    env_file:
+      - ./envs/moderation
+    networks:
+      - traefik_network
+      - internal_network
+    healthcheck:
+      test: "wget -q --spider http://localhost:3000/xrpc/_health"
+      interval: 5s
+      retries: 20
+    depends_on:
+      database:
+        condition: service_healthy
+    labels:
+      "traefik.enable": "true"
+      "traefik.http.services.socl-moderation.loadbalancer.server.port": "3000"
+      "traefik.http.routers.socl-moderation.rule": "Host(`mod.at.socl.is`) && PathPrefix(`/`)"
+      "traefik.http.routers.socl-moderation.tls.certresolver": "resolver"
+      "traefik.http.routers.socl-moderation.tls.domains[0].main": "at.socl.is"
+      "traefik.http.routers.socl-moderation.tls.domains[0].sans": "*.at.socl.is"
+
+  moderation-daemon:
+    build:
+      context: ./repos/atproto/
+      dockerfile: services/ozone/Dockerfile
+    restart: always
+    command: node --enable-source-maps daemon.js
+    env_file:
+      - ./envs/moderation
+    networks:
+      - traefik_network
+      - internal_network
+    depends_on:
+      moderation-api:
+        condition: service_healthy
+      database:
+        condition: service_healthy
+
+  pds-fix-permission:
+    image: alpine:latest
+    volumes:
+      - ./data/pds/:/data/
+    command: chown 1000.1000 /data
+
+  pds:
+    build:
+      context: ./repos/atproto/
+      dockerfile: services/pds/Dockerfile
+    restart: always
+    env_file:
+      - ./envs/pds
+    volumes:
+      - ./data/pds/:/data/
+    networks:
+      - traefik_network
+      - internal_network
+    healthcheck:
+      test: "wget -q --spider http://localhost:3000/xrpc/_health"
+      interval: 5s
+      retries: 20
+    depends_on:
+      database:
+        condition: service_healthy
+      pds-fix-permission:
+        condition: service_completed_successfully
+    labels:
+      "traefik.enable": "true"
+      "traefik.http.services.socl-pds.loadbalancer.server.port": "3000"
+      "traefik.http.routers.socl-pds.rule": "(Host(`socl.is`)||HostRegexp(`^.+\\.socl\\.is$`)) && (PathPrefix(`/xrpc`) || PathPrefix(`/.well-known`) || PathPrefix(`/robots.txt`))"
+      "traefik.http.routers.socl-pds.priority": 3
+      "traefik.http.routers.socl-pds.tls.certresolver": "resolver"
+      "traefik.http.routers.socl-pds.tls.domains[0].main": "socl.is"
+      "traefik.http.routers.socl-pds.tls.domains[0].sans": "*.socl.is"
+
+  social-app:
+    build:
+      context: ./repos/social-app/
+      dockerfile: Dockerfile
+    restart: always
+    env_file:
+      - ./envs/social-app
+    command: "/usr/bin/bskyweb serve"
+    networks:
+      - traefik_network
+    labels:
+      "traefik.enable": "true"
+      "traefik.http.services.socl-app.loadbalancer.server.port": "8100"
+      "traefik.http.routers.socl-app.rule": "Host(`socl.is`) && PathPrefix(`/`)"
+      "traefik.http.routers.socl-app.priority": 2
+      "traefik.http.routers.socl-app.tls.certresolver": "resolver"
+      "traefik.http.routers.socl-app.tls.domains[0].main": "socl.is"
+      "traefik.http.routers.socl-app.tls.domains[0].sans": "*.socl.is"
+
+      "traefik.http.middlewares.socl-app-redirector.redirectregex.regex": "^https://(.*).socl.is/(.*)"
+      "traefik.http.middlewares.socl-app-redirector.redirectregex.replacement": "https://socl.is/profile/$${1}.socl.is/$${2}"
+      "traefik.http.routers.socl-app-redirector.rule": "HostRegexp(`^.+\\.socl\\.is$`) && PathPrefix(`/`)"
+      "traefik.http.routers.socl-app-redirector.priority": 2
+      "traefik.http.routers.socl-app-redirector.service": "socl-app"
+      "traefik.http.routers.socl-app-redirector.middlewares": "socl-app-redirector"
+      "traefik.http.routers.socl-app-redirector.tls.certresolver": "resolver"
+      "traefik.http.routers.socl-app-redirector.tls.domains[0].main": "socl.is"
+      "traefik.http.routers.socl-app-redirector.tls.domains[0].sans": "*.socl.is"
+
+  search:
+    build:
+      context: ./repos/indigo/
+      dockerfile: cmd/palomar/Dockerfile
+    restart: always
+    env_file:
+      - ./envs/search
+    networks:
+      - traefik_network
+      - internal_network
+    depends_on:
+      opensearch:
+        condition: service_healthy
+      database:
+        condition: service_healthy
+    labels:
+      "traefik.enable": "true"
+      "traefik.http.services.socl-search.loadbalancer.server.port": "3999"
+      "traefik.http.routers.socl-search.rule": "Host(`search.socl.is`) && PathPrefix(`/`)"
+      "traefik.http.routers.socl-search.tls.certresolver": "resolver"
+      "traefik.http.routers.socl-search.tls.domains[0].main": "socl.is"
+      "traefik.http.routers.socl-search.tls.domains[0].sans": "*.socl.is"
+
+  feed-generator:
+    build:
+      context: ./repos/feed-generator/
+    restart: always
+    env_file:
+      - ./envs/feed-generator
+    volumes:
+      - ./data/feed-generator/:/data/
+    networks:
+      - traefik_network
+    labels:
+      "traefik.enable": "true"
+      "traefik.http.services.socl-feed-generator.loadbalancer.server.port": "3000"
+      "traefik.http.routers.socl-feed-generator.rule": "Host(`op.feed.socl.is`) && PathPrefix(`/`)"
+      "traefik.http.routers.socl-feed-generator.tls.certresolver": "resolver"
+      "traefik.http.routers.socl-feed-generator.tls.domains[0].main": "feed.socl.is"
+      "traefik.http.routers.socl-feed-generator.tls.domains[0].sans": "*.feed.socl.is"
+
+  opensearch-fix-permission:
+    image: alpine:latest
+    volumes:
+      - ./data/opensearch/:/data/
+    command: chown 1000.1000 /data/
+
+  opensearch:
+    build:
+      context: ./repos/indigo/
+      dockerfile: cmd/palomar/Dockerfile.opensearch
+    restart: always
+    env_file:
+      - ./envs/opensearch
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./data/opensearch/:/usr/share/opensearch/data/
+    networks:
+      - internal_network
+    depends_on:
+      opensearch-fix-permission:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+
+  database:
+    image: postgres:16-alpine
+    restart: always
+    env_file:
+      - ./envs/postgres
+    volumes:
+      - ./configs/postgres/init/:/docker-entrypoint-initdb.d/
+      - ./data/database/:/var/lib/postgresql/data/
+    networks:
+      - internal_network
+    healthcheck:
+      test: "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:alpine
+    restart: always
+    volumes:
+      - ./data/redis/:/data/
+    networks:
+      - internal_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping", "|", "grep", "PONG"]
+      interval: 1s
+      timeout: 5s
+      retries: 5
+
+networks:
+  traefik_network:
+    external: true
+  internal_network:
+    internal: true

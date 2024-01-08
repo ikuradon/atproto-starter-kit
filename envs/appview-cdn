@@ -1,0 +1,40 @@
+###
+# AppView
+###
+DEBUG_MODE=1
+LOG_ENABLED="true"
+LOG_LEVEL=debug
+LOG_DESTINATION=1
+
+# this requires setting up a local postgresql user and database
+ENABLE_MIGRATIONS=true
+DB_PRIMARY_POSTGRES_URL=postgres://postgres:postgres@database/appview
+DB_REPLICA_POSTGRES_URLS=postgres://postgres:postgres@database/appview
+DB_REPLICA_TAGS_ANY=0
+ADMIN_PASSWORD=<<REDACTED: same as ./appview>>
+MODERATOR_PASSWORD=<<REDACTED: same as ./appview>>
+TRIAGE_PASSWORD=<<REDACTED: same as ./appview>>
+MODERATION_SERVICE_DID=did:web:mod.at.socl.is
+SERVICE_SIGNING_KEY=<<REDACTED: same as ./appview>>
+PUBLIC_URL=https://api.at.socl.is
+SERVER_DID=did:web:api.at.socl.is
+DID_PLC_URL=https://plc.socl.is
+BLOB_CACHE_LOC=/cache/
+SEARCH_ENDPOINT=https://search.socl.is
+
+REDIS_HOST=redis
+
+INDEXER_PARTITION_IDS=0
+INGESTER_PARTITION_COUNT=1
+PUSH_NOTIFICATION_ENDPOINT=https://push.bsky.app/api/push
+REPO_PROVIDER=wss://socl.is
+
+MODERATION_PUSH_URL=https://admin:<<REDACTED: OZONE_ADMIN_PASSWORD in ./moderation>>@mod.at.socl.is
+
+# IMG_URI_ENDPOINT=https://cdn.socl.is/img
+IMG_URI_SALT=<<REDACTED: same as ./appview>>
+IMG_URI_KEY=<<REDACTED: same as ./appview>>
+
+CF_DISTRIBUTION_ID=<<REDACTED>>
+AWS_ACCESS_KEY_ID=<<REDACTED>>
+AWS_SECRET_ACCESS_KEY=<<REDACTED>>

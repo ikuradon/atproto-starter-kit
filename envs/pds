@@ -1,0 +1,30 @@
+DEBUG_MODE=1
+LOG_ENABLED="true"
+LOG_LEVEL=debug
+LOG_DESTINATION=1
+
+PDS_HOSTNAME=socl.is
+PDS_JWT_SECRET=<<REDACTED: openssl rand --hex 16>>
+PDS_ADMIN_PASSWORD=<<REDACTED: openssl rand --hex 16>>
+PDS_REPO_SIGNING_KEY_K256_PRIVATE_KEY_HEX=<<REDACTED: openssl ecparam --name secp256k1 --genkey --noout --outform DER | tail --bytes=+8 | head --bytes=32 | xxd --plain --cols 32>>
+PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX=<<REDACTED: openssl ecparam --name secp256k1 --genkey --noout --outform DER | tail --bytes=+8 | head --bytes=32 | xxd --plain --cols 32>>
+PDS_DATA_DIRECTORY=/data
+PDS_DB_POSTGRES_URL=postgresql://postgres:postgres@database:5432/pds
+PDS_BLOBSTORE_S3_BUCKET=soclis-blobstore
+PDS_DID_PLC_URL=https://plc.socl.is
+PDS_BSKY_APP_VIEW_URL=https://api.at.socl.is
+PDS_BSKY_APP_VIEW_DID=did:web:api.at.socl.is
+PDS_MOD_SERVICE_URL=https://mod.at.socl.is
+PDS_MOD_SERVICE_DID=did:web:mod.at.socl.is
+
+PDS_CRAWLERS=https://bgs.at.socl.is
+
+AWS_ACCESS_KEY_ID=<<REDACTED>>
+AWS_SECRET_ACCESS_KEY=<<REDACTED>>
+AWS_REGION=ap-northeast-1
+
+PDS_EMAIL_SMTP_URL=smtp://<<REDACTED: SMTP User>>:<<REDACTED: SMTP Password>>@<<REDACTED: SMTP Server>>/?pool=true&secure=true
+PDS_EMAIL_FROM_ADDRESS=no-reply@socl.is
+
+PDS_INVITE_REQUIRED=true
+PDS_INVITE_INTERVAL=604800000

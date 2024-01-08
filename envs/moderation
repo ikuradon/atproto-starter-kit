@@ -1,0 +1,22 @@
+###
+# Moderation
+###
+DEBUG_MODE=1
+LOG_ENABLED="true"
+LOG_LEVEL=debug
+LOG_DESTINATION=1
+
+ENABLE_MIGRATIONS=true
+
+OZONE_PUBLIC_URL=https://mod.at.socl.is
+OZONE_SERVER_DID=did:web:mod.at.socl.is
+OZONE_APPVIEW_URL=https://api.at.socl.is
+OZONE_APPVIEW_DID=did:web:api.at.socl.is
+OZONE_PDS_URL=https://socl.is
+OZONE_PDS_DID=did:web:socl.is
+OZONE_DB_POSTGRES_URL=postgres://postgres:postgres@database/moderation
+OZONE_DID_PLC_URL=https://plc.socl.is
+OZONE_ADMIN_PASSWORD=<<REDACTED: openssl ecparam --name secp256k1 --genkey --noout --outform DER | tail --bytes=+8 | head --bytes=32 | xxd --plain --cols 32>>
+OZONE_MODERATOR_PASSWORD=<<REDACTED: openssl ecparam --name secp256k1 --genkey --noout --outform DER | tail --bytes=+8 | head --bytes=32 | xxd --plain --cols 32>>
+OZONE_TRIAGE_PASSWORD=<<REDACTED: openssl ecparam --name secp256k1 --genkey --noout --outform DER | tail --bytes=+8 | head --bytes=32 | xxd --plain --cols 32>>
+OZONE_SIGNING_KEY_HEX=<<REDACTED: openssl ecparam --name secp256k1 --genkey --noout --outform DER | tail --bytes=+8 | head --bytes=32 | xxd --plain --cols 32>>

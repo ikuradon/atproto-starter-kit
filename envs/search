@@ -1,0 +1,5 @@
+ELASTICSEARCH_URL=http://opensearch:9200
+ATP_BGS_HOST=wss://bgs.at.socl.is
+ATP_PLC_HOST=https://plc.socl.is
+
+DATABASE_URL=postgres://postgres:postgres@database/search
